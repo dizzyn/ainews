@@ -1,0 +1,58 @@
+# docker-compose.yml
+
+services:
+  #######################
+  # Databáze
+  #######################
+  db:
+    image: postgres:15
+    container_name: my-admin-db-prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  #######################
+  # Backend (Python)
+  #######################
+  backend:
+    build:
+      context: ./backend # Použije backend/Dockerfile
+    container_name: my-admin-backend-prod
+    command: > # Spustí Alembic migrace a pak Gunicorn
+      sh -c "alembic upgrade head &&
+             gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:8000 src.main:app"
+    ports:
+      - "8000:8000" # Můžeš nahradit reverzním proxy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  #######################
+  # Frontend (Nginx)
+  #######################
+  frontend:
+    build:
+      context: ./frontend # Použije frontend/Dockerfile
+    container_name: my-admin-frontend-prod
+    ports:
+      - "80:80" # Standardní HTTP port
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

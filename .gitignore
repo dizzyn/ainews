@@ -1,0 +1,31 @@
+.env
+
+# Virtuální prostředí
+venv/
+.venv/
+
+# --- Node.js / Frontend ---
+# ZÁKLADNÍ: Složka se všemi staženými balíčky
+node_modules/
+
+# Výstupy SvelteKitu a Vite
+.svelte-kit/
+build/
+dist/
+
+# Logy
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Cache
+.eslintcache
+
+# --- IDE / Editory ---
+# VS Code (nechceme uživatelská nastavení, ale chceme sdílet `launch.json`)
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/.user/
+
+# JetBrains (PyCharm, WebStorm)
+.idea/

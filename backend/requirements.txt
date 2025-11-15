@@ -1,0 +1,26 @@
+# backend/requirements.txt
+
+# --- Web Framework ---
+fastapi
+
+# --- ASGI Server ---
+# Pro vývoj (s hot-reload)
+uvicorn[standard]
+# Pro produkci
+gunicorn
+
+# --- Databáze & ORM ---
+# ORM
+sqlalchemy
+# Migrace
+alembic
+# Ovladač pro PostgreSQL (nejběžnější volba)
+psycopg2-binary
+
+# --- Ostatní ---
+# Pro načítání .env souborů (i když to Docker řeší, hodí se pro lokální testy)
+python-dotenv
+
+# Pro snadné řešení CORS (Cross-Origin Resource Sharing) mezi FE a BE
+# Pokud nepoužíváš FastAPI, nahraď odpovídající knihovnou
+fastapi-cors
