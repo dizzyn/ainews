@@ -1,19 +1,13 @@
-# backend/src/main.py
-
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List # Přidat tento import
 
-# Importujeme naše nové moduly
 from . import models, schemas
 from .database import engine, get_db, Base
 
-# Tento příkaz řekne Alembicu (až ho nastavíme), 
-# aby věděl o našich modelech.
-# Pro teď také může vytvořit tabulky (ale na to použijeme Alembic)
+# Tento příkaz řekne Alembicu o našich modelech.
 Base.metadata.create_all(bind=engine)
-
 
 app = FastAPI(
     title="Article Admin API",

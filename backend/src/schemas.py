@@ -15,7 +15,6 @@ class ArticleCreate(ArticleBase):
 class Article(ArticleBase):
     id: int
 
-    # Dříve 'orm_mode = True'
     # Říká Pydanticu, aby četl data i z ORM modelu (nejen z dict)
     class Config:
         from_attributes = True
