@@ -31,3 +31,5 @@ pydantic
 playwright==1.49.0
 trafilatura
 debugpy
+newspaper3k
+lxml_html_clean

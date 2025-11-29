@@ -59,3 +59,15 @@ def read_articles(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
     """
     articles = db.query(models.Article).offset(skip).limit(limit).all()
     return articles
+
+
+@app.get("/articles/{article_id}", response_model=schemas.ArticleDetail, tags=["Articles"])
+def read_article(article_id: int, db: Session = Depends(get_db)):
+    """
+    Vrátí detail článku včetně obsahu.
+    """
+    article = db.query(models.Article).filter(models.Article.id == article_id).first()
+    if article is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Článek nenalezen")
+    return article

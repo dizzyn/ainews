@@ -39,6 +39,7 @@
 						<th class="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200">Název</th>
 						<th class="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200">URL</th>
 						<th class="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200">Kategorie</th>
+						<th class="px-4 py-3 text-left font-semibold text-gray-700 border-b-2 border-gray-200">Akce</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -73,6 +74,14 @@
 											<div><span class="font-semibold">Lidé:</span> {parsed.people.join(', ')}</div>
 										{/if}
 									</div>
+								</td>
+								<td class="px-4 py-3 border-b border-gray-100">
+									<a 
+										href="/article/{article.id}" 
+										class="text-blue-600 hover:underline font-medium"
+									>
+										Detail →
+									</a>
 								</td>
 							</tr>
 						{/if}

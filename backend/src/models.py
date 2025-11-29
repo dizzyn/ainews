@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from .database import Base  # Importujeme Base z našeho database.py
 
 class Article(Base):
@@ -8,3 +8,5 @@ class Article(Base):
     title = Column(String(500), index=True)
     url = Column(String(1000), unique=True, index=True)
     categories = Column(Text, nullable=True)  # JSON string s kategorizací (země, osoby)
+    content = Column(Text, nullable=True)  # Obsah článku jako markdown
+    published_date = Column(DateTime, nullable=True)  # Datum vydání článku
