@@ -24,3 +24,10 @@ python-dotenv
 # Pro snadné řešení CORS (Cross-Origin Resource Sharing) mezi FE a BE
 # Pokud nepoužíváš FastAPI, nahraď odpovídající knihovnou
 fastapi-cors
+
+langchain-google-genai
+langchain-core
+pydantic
+playwright==1.49.0
+trafilatura
+debugpy

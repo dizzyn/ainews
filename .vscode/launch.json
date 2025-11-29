@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "Crawler (Docker)",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/backend",
+                    "remoteRoot": "/app"
+                }
+            ]
+        },
+        {
+            "name": "Crawler (Local)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/src/crawler.py",
+            "console": "integratedTerminal",
+            "env": {
+                "TARGET_URL": "https://www.novinky.cz",
+                "DATABASE_URL": "postgresql://admin:admin@localhost:5432/admin_db"
+            }
+        }
+    ]
+}

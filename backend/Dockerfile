@@ -1,14 +1,12 @@
 # backend/Dockerfile
 
-# 1. Base image
-FROM python:3.11-slim
+# 1. Base image - Playwright oficiální image s Pythonem (Python 3.12)
+FROM mcr.microsoft.com/playwright/python:v1.49.0-noble
 
 # 2. Nastavení pracovního adresáře
 WORKDIR /app
 
-# 3. Instalace závislostí
-# Kopírujeme jen requirements.txt, abychom využili Docker cache
-# Nová instalace proběhne jen při změně requirements.txt
+# 3. Instalace Python závislostí
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

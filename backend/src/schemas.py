@@ -4,7 +4,8 @@ from typing import Optional
 # Základní schéma s poli, která jsou společná
 class ArticleBase(BaseModel):
     title: str
-    content: Optional[str] = None
+    url: str
+    categories: Optional[str] = None
 
 # Schéma pro Vytvoření článku (co přijímáme od klienta)
 class ArticleCreate(ArticleBase):

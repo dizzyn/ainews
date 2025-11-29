@@ -1,7 +1,11 @@
 import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
+# Načteme .env soubor
+load_dotenv()
 
 # Načteme URL z proměnné prostředí (z .env -> docker-compose)
 DATABASE_URL = os.getenv("DATABASE_URL")

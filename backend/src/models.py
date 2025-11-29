@@ -5,6 +5,6 @@ class Article(Base):
     __tablename__ = "articles"  # Název tabulky v databázi
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), index=True)
-    content = Column(Text, nullable=True)
-    # Později můžeš přidat další, např. 'author', 'created_at' atd.
+    title = Column(String(500), index=True)
+    url = Column(String(1000), unique=True, index=True)
+    categories = Column(Text, nullable=True)  # JSON string s kategorizací (země, osoby)
