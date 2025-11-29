@@ -11,10 +11,12 @@ from pydantic import BaseModel, Field
 from .database import SessionLocal
 from .models import Article as DBArticle
 
-# 1. Načtení API klíče
+# 1. Načtení API klíče a konfigurace
 load_dotenv()
 
 TARGET_URL = os.getenv("TARGET_URL", "https://www.novinky.cz")
+MAX_ARTICLES = int(os.getenv("MAX_ARTICLES", "100"))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "20"))
 
 # 2. Definice datových modelů (Vstup a Výstup pro AI)
 class LinkItem(BaseModel):
@@ -27,14 +29,31 @@ class LinkItem(BaseModel):
 
 class ArticleItem(BaseModel):
     """
-    Jeden vybraný článek s kategorizací.
+    Jedna vybraná zpráva s kategorizací.
     """
-    index: int = Field(description="Index článku ze vstupního seznamu (0-based)")
+    index: int = Field(
+        description="Index zprávy ze vstupního seznamu (0-based)",
+        ge=0
+    )
+    what_happened: str = Field(
+        description="V krátké větě: co se stalo, co dříve nebylo a teď je, jaká nová informace byla zjištěna.",
+        min_length=10,
+        max_length=500
+    )
+    impact_on: str = Field(
+        description="Na koho má událost dopad - jednotlivec, skupina, organizace, stát, atd.",
+        min_length=5,
+        max_length=300
+    )
     countries: List[str] = Field(
-        description="Seznam zemí, kterých se článek týká (např. Česko, Německo, USA, EU). Prázdný seznam pokud se netýká konkrétní země."
+        default_factory=list,
+        description="Seznam zemí, kterých se zpráva týká (např. Česko, Německo, USA, EU). Prázdný seznam pokud se netýká konkrétní země.",
+        max_length=10
     )
     people: List[str] = Field(
-        description="Seznam veřejných osob (jméno nebo funkce), kterých se článek týká. Prázdný seznam pokud se netýká konkrétní osoby."
+        default_factory=list,
+        description="Seznam veřejných osob (jméno nebo funkce), kterých se zpráva týká. Prázdný seznam pokud se netýká konkrétní osoby.",
+        max_length=20
     )
 
 class ArticleSelection(BaseModel):
@@ -43,7 +62,7 @@ class ArticleSelection(BaseModel):
     LangChain zajistí, že dostaneme přesně tento formát (JSON).
     """
     articles: List[ArticleItem] = Field(
-        description="Seznam vybraných článků s jejich indexy a kategorizací."
+        description="Seznam vybraných zpráv s jejich indexy a kategorizací."
     )
 
 # 3. Nastavení AI (Gemini 1.5 Flash)
@@ -109,63 +128,103 @@ async def get_page_links(url: str) -> List[LinkItem]:
     return clean_links
 
 
-async def analyze_with_ai(links: List[LinkItem]) -> List[ArticleItem]:
+async def analyze_chunk_with_ai(links: List[LinkItem], chunk_offset: int = 0) -> List[ArticleItem]:
     """
-    Pošle seznam odkazů do Gemini k posouzení.
+    Pošle jeden chunk odkazů do Gemini k posouzení.
     Vrátí seznam článků s indexy a kategorizací.
+    chunk_offset se přičítá k indexům pro správné mapování na celkový seznam.
     """
     if not links:
         return []
     
-    print("🤖 Posílám data agentovi k analýze...")
+    print(f"🤖 Analyzuji chunk {chunk_offset}-{chunk_offset + len(links) - 1}...")
     
-    # Prompt (Instrukce pro agenta)
-    # Vytvoříme indexovaný seznam nadpisů
+    # Vytvoříme indexovaný seznam nadpisů (s lokálními indexy)
     indexed_titles = "\n".join([f"{i}. {link.text}" for i, link in enumerate(links)])
     
     prompt_text = (
-        "Jsi redakční robot. Tvým úkolem je projít indexovaný seznam nadpisů z hlavní stránky zpravodajského webu "
-        "a vybrat POUZE ty, které jsou **konkrétní články** (zprávy, reportáže, komentáře).\n\n"
-        "PRAVIDLA:\n"
-        "1. VYBER nadpisy, které vypadají jako titulky článků.\n"
-        "2. IGNORUJ navigační odkazy (Domů, Sport, Počasí, Autoři, Archiv).\n"
-        "3. IGNORUJ patičku, reklamu, login a technické stránky.\n"
-        "4. Pro každý vybraný článek urči:\n"
-        "   - **země**: které se článek týká (Česko, Německo, USA, EU, atd.). Pokud se týká EU jako celku, uveď 'EU'.\n"
-        "   - **osoby**: veřejné osoby (jméno nebo funkce), kterých se článek týká.\n\n"
-        "Vrať indexy vybraných článků (0-based) spolu s kategorizací.\n\n"
-        f"Seznam nadpisů:\n{indexed_titles}"
+        "You are an editorial robot. Your task is to review an indexed list of headlines from a news website's main page "
+        "and select ONLY those that are **news with informational value**.\n\n"
+        "CRITERIA FOR SELECTING NEWS:\n"
+        "A news item must meet BOTH of the following criteria:\n"
+        "1. Something NEW happened or we learned something that was not previously known\n"
+        "2. The reported event has an IMPACT on someone (individual, group, organization, state)\n\n"
+        "WHAT TO EXCLUDE:\n"
+        "- Navigation links (Home, Sports, Weather, Authors, Archive)\n"
+        "- Footer, advertisements, login, and technical pages\n"
+        "- General articles without a specific event (tips, guides, product reviews)\n"
+        "- Comments and analyses without a new event (look for prefixes like 'komentář', 'point of view', or similar)\n"
+        "- Sports results and entertainment news (unless they have broader social impact)\n"
+        "- Jokes and artistic content (in Czech: 'vtip', 'umění') - these may look like articles but are entertainment/art content\n"
+        "- Opinion pieces and commentaries - some commentators write their findings but it's not news (recognizable by 'komentář', 'point of view', or similar prefixes)\n\n"
+        "FOR EACH SELECTED NEWS ITEM, DETERMINE:\n"
+        "1. **what_happened**: In a short sentence, summarize what happened - what was not there before and is now\n"
+        "2. **impact_on**: Who is affected by the event (e.g., 'citizens of Czech Republic', 'employees of company X', 'patients', 'Donald Trump')\n"
+        "3. **countries**: List of countries the news relates to (Czech Republic, Germany, USA, EU, etc.)\n"
+        "4. **people**: List of public figures (name or position) the news relates to\n\n"
+        "Return the indices of selected news items (0-based) along with complete categorization.\n\n"
+        f"List of headlines:\n{indexed_titles}"
     )
-
-    # print(prompt_text)
     
     try:
         result = await ai_selector.ainvoke(prompt_text)
+        # Přičteme offset k indexům pro správné mapování
+        for article in result.articles:
+            article.index += chunk_offset
         return result.articles
     except Exception as e:
         print(f"❌ Chyba při komunikaci s AI: {e}")
         return []
 
 
+async def analyze_with_ai_in_chunks(links: List[LinkItem], chunk_size: int = CHUNK_SIZE) -> List[ArticleItem]:
+    """
+    Rozdělí odkazy na menší chunky a zpracuje je postupně.
+    Vrátí agregovaný seznam všech vybraných článků.
+    """
+    if not links:
+        return []
+    
+    all_articles = []
+    total_chunks = (len(links) + chunk_size - 1) // chunk_size
+    
+    print(f"\n📦 Zpracovávám {len(links)} odkazů v {total_chunks} chuncích po {chunk_size}...")
+    
+    for i in range(0, len(links), chunk_size):
+        chunk = links[i:i + chunk_size]
+        chunk_num = i // chunk_size + 1
+        print(f"\n--- Chunk {chunk_num}/{total_chunks} ---")
+        
+        articles = await analyze_chunk_with_ai(chunk, chunk_offset=i)
+        all_articles.extend(articles)
+        
+        print(f"   ✓ Nalezeno {len(articles)} zpráv v tomto chunku")
+    
+    print(f"\n✅ Celkem nalezeno {len(all_articles)} zpráv ze všech chunků")
+    return all_articles
+
+
 def save_to_database(articles: List[ArticleItem], links: List[LinkItem]) -> None:
     """
-    Smaže databázi a uloží nové články.
+    Smaže databázi a uloží nové zprávy.
     """
     db = SessionLocal()
     try:
         # 1. Smazání všech existujících článků
-        print("\n🗑️  Mažu staré články z databáze...")
+        print("\n🗑️  Mažu staré zprávy z databáze...")
         deleted_count = db.query(DBArticle).delete()
-        print(f"   Smazáno: {deleted_count} článků")
+        print(f"   Smazáno: {deleted_count} zpráv")
         
-        # 2. Uložení nových článků
-        print("\n💾 Ukládám nové články do databáze...")
+        # 2. Uložení nových zpráv
+        print("\n💾 Ukládám nové zprávy do databáze...")
         for article in articles:
             if 0 <= article.index < len(links):
                 link = links[article.index]
                 
                 # Vytvoření kategorizace jako JSON string
                 categories_data = {
+                    "what_happened": article.what_happened,
+                    "impact_on": article.impact_on,
                     "countries": article.countries,
                     "people": article.people
                 }
@@ -178,7 +237,7 @@ def save_to_database(articles: List[ArticleItem], links: List[LinkItem]) -> None
                 db.add(db_article)
         
         db.commit()
-        print(f"   ✅ Uloženo: {len(articles)} článků")
+        print(f"   ✅ Uloženo: {len(articles)} zpráv")
         
     except Exception as e:
         db.rollback()
@@ -192,21 +251,23 @@ async def main():
     # 1. Krok: Získání dat
     links = await get_page_links(TARGET_URL)
     
-    # 2. Krok: Analýza AI
-    # Pro jistotu vezmeme prvních 50 nejdelších odkazů (články mívají dlouhé titulky),
-    # abychom neplatili za analýzu menu a patiček zbytečně.
-    # (Seřadíme podle délky textu sestupně)
+    # 2. Krok: Příprava kandidátů
+    # Seřadíme podle délky textu sestupně (články mívají dlouhé titulky)
+    # a vezmeme prvních MAX_ARTICLES kandidátů
     sorted_links = sorted(links, key=lambda x: len(x.text), reverse=True)
-    top_candidates = sorted_links[:50]
+    top_candidates = sorted_links[:MAX_ARTICLES]
     
-    articles = await analyze_with_ai(top_candidates)
+    print(f"\n📊 Zpracovávám {len(top_candidates)} kandidátů (MAX_ARTICLES={MAX_ARTICLES})")
+    
+    # 3. Krok: Analýza AI po chuncích
+    articles = await analyze_with_ai_in_chunks(top_candidates, chunk_size=CHUNK_SIZE)
 
-    # 3. Krok: Uložení do databáze
+    # 4. Krok: Uložení do databáze
     save_to_database(articles, top_candidates)
 
-    # 4. Krok: Výpis
+    # 5. Krok: Výpis
     print("\n" + "="*60)
-    print(f"✅ VÝSLEDEK: Nalezeno {len(articles)} článků")
+    print(f"✅ VÝSLEDEK: Nalezeno {len(articles)} zpráv")
     print("="*60)
     
     for i, article in enumerate(articles, 1):
@@ -218,7 +279,11 @@ async def main():
         
         print(f"\n{i:02d}. {title}")
         
-        # Výpis kategorií
+        # Výpis nových klasifikací
+        print(f"    📰 Co se stalo: {article.what_happened}")
+        print(f"    🎯 Dopad na: {article.impact_on}")
+        
+        # Výpis původních kategorií
         if article.countries:
             print(f"    🌍 Země: {', '.join(article.countries)}")
         if article.people:

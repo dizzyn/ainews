@@ -18,15 +18,17 @@ RUN npm run build
 #######################
 # FÁZE 2: Produkce (Prod)
 #######################
-FROM nginx:1.25-alpine
+FROM node:20-alpine
 
-# Kopírování build assetů z "builder" fáze
-# Předpokládáme, že adapter-static ukládá build do adresáře 'build'
-COPY --from=builder /app/build /usr/share/nginx/html
+WORKDIR /app
 
-# Kopírování vlastní Nginx konfigurace (viz níže)
-# Tato konfigurace je klíčová pro SvelteKit routing!
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 3000
+
+ENV NODE_ENV=production
+ENV ORIGIN=http://localhost
+
+CMD ["node", "build"]
