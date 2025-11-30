@@ -55,12 +55,23 @@ def create_article(
     return db_article
 
 
+@app.get("/digest/", response_model=schemas.ArticleDetail, tags=["Articles"])
+def read_digest(db: Session = Depends(get_db)):
+    """
+    Vrátí aktuální přehled zpráv (digest).
+    """
+    digest = db.query(models.Article).filter(models.Article.url == "DIGEST").first()
+    if digest is None:
+        raise HTTPException(status_code=404, detail="Přehled zpráv nenalezen")
+    return digest
+
+
 @app.get("/articles/", response_model=List[schemas.Article], tags=["Articles"])
 def read_articles(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
-    Vrátí seznam článků.
+    Vrátí seznam článků (bez digestu).
     """
-    articles = db.query(models.Article).offset(skip).limit(limit).all()
+    articles = db.query(models.Article).filter(models.Article.url != "DIGEST").offset(skip).limit(limit).all()
     return articles
 
 

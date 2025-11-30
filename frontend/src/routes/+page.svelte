@@ -26,6 +26,21 @@
 <div class="max-w-7xl mx-auto p-8">
 	<h1 class="text-3xl font-bold mb-8 text-gray-800">Seznam článků</h1>
 	
+	{#if data.digest}
+		<div class="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-lg p-6 shadow-md">
+			<div class="flex items-start gap-3">
+				<div class="text-3xl">📰</div>
+				<div class="flex-1">
+					<h2 class="text-xl font-bold text-gray-800 mb-2">Přehled zpráv</h2>
+					<p class="text-gray-700 leading-relaxed">{data.digest.content}</p>
+					<p class="text-xs text-gray-500 mt-3">
+						Aktualizováno: {new Date(data.digest.published_date).toLocaleString('cs-CZ')}
+					</p>
+				</div>
+			</div>
+		</div>
+	{/if}
+	
 	{#if data.error}
 		<p class="text-red-700 p-4 bg-red-50 rounded">{data.error}</p>
 	{:else if !data.articles || data.articles.length === 0}

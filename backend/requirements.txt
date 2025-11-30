@@ -4,32 +4,30 @@
 fastapi
 
 # --- ASGI Server ---
-# Pro vývoj (s hot-reload)
 uvicorn[standard]
-# Pro produkci
 gunicorn
 
 # --- Databáze & ORM ---
-# ORM
 sqlalchemy
-# Migrace
 alembic
-# Ovladač pro PostgreSQL (nejběžnější volba)
 psycopg2-binary
 
 # --- Ostatní ---
-# Pro načítání .env souborů (i když to Docker řeší, hodí se pro lokální testy)
 python-dotenv
 
-# Pro snadné řešení CORS (Cross-Origin Resource Sharing) mezi FE a BE
-# Pokud nepoužíváš FastAPI, nahraď odpovídající knihovnou
-fastapi-cors
+# --- LangChain & AI ---
+langchain==0.3.7
+langchain-google-genai==2.0.5
+langchain-core==0.3.15
+pydantic==2.9.2
 
-langchain-google-genai
-langchain-core
-pydantic
+# --- Web Scraping ---
 playwright==1.49.0
 trafilatura
-debugpy
 lxml_html_clean
+
+# --- Google AI ---
 google-generativeai
+
+# --- Development ---
+debugpy

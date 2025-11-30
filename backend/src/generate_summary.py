@@ -38,16 +38,16 @@ def generate_summaries_for_article(article: Article, db: Session) -> bool:
     
     try:
         # Jednoduchá sumarizace
-        prompt_simple = f"""Summarize the following article in a few sentences - explain what happened.
+        prompt_simple = f"""Summarize the following article in a few sentences in Czech - explain what happened.
 
-If the content is prohibited or you cannot generate a summary, respond with: "Content unavailable for summarization."
+If the content is prohibited or you cannot generate a summary, respond with: "Obsah není dostupný pro sumarizaci."
 
 Title: {article.title}
 
 Content:
 {article.content[:3000]}
 
-Respond only with the summary, without any additional text."""
+Respond only with the summary in Czech, without any additional text."""
         
         response = llm.invoke(prompt_simple)
         article.summary_simple = response.content
