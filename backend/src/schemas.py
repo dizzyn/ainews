@@ -26,6 +26,11 @@ class ArticleDetail(ArticleBase):
     id: int
     content: Optional[str] = None
     published_date: Optional[datetime] = None
+    summary_simple: Optional[str] = None
+    summary_funny: Optional[str] = None
+    summary_storytelling: Optional[str] = None
+    retold_content: Optional[str] = None
+    image_filename: Optional[str] = None
 
     class Config:
         from_attributes = True

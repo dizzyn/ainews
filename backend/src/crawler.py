@@ -17,6 +17,7 @@ load_dotenv()
 TARGET_URL = os.getenv("TARGET_URL", "https://www.novinky.cz")
 MAX_ARTICLES = int(os.getenv("MAX_ARTICLES", "100"))
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "20"))
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
 
 # 2. Definice datových modelů (Vstup a Výstup pro AI)
 class LinkItem(BaseModel):
@@ -65,9 +66,9 @@ class ArticleSelection(BaseModel):
         description="Seznam vybraných zpráv s jejich indexy a kategorizací."
     )
 
-# 3. Nastavení AI (Gemini 1.5 Flash)
+# 3. Nastavení AI (Gemini)
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash-lite",
+    model=GEMINI_MODEL,
     temperature=0,
 )
 

@@ -5,6 +5,14 @@
 	let { data }: { data: PageData } = $props();
 
 	let htmlContent = $state('');
+	let expandedSections = $state({
+		image: false,
+		simple: false,
+		funny: false,
+		storytelling: false,
+		retold: false,
+		original: true
+	});
 
 	function parseCategories(categories: any) {
 		if (!categories) return null;
@@ -32,6 +40,10 @@
 			month: 'long', 
 			day: 'numeric' 
 		});
+	}
+
+	function toggleSection(section: keyof typeof expandedSections) {
+		expandedSections[section] = !expandedSections[section];
 	}
 
 	let parsedCategories = $derived(data.article ? parseCategories(data.article.categories) : null);
@@ -98,9 +110,114 @@
 				</div>
 			{/if}
 
+			<!-- Obrázek článku -->
+			{#if data.article.image_filename}
+				<div class="border border-gray-200 rounded-lg overflow-hidden mb-6">
+					<button 
+						onclick={() => toggleSection('image')}
+						class="w-full flex items-center justify-between p-4 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+					>
+						<span class="font-semibold text-indigo-900">🖼️ Vygenerovaný obrázek</span>
+						<span class="text-indigo-700 text-xl">{expandedSections.image ? '−' : '+'}</span>
+					</button>
+					{#if expandedSections.image}
+						<div class="p-4 bg-white">
+							<img 
+								src={`http://localhost:8000/images/${data.article.image_filename}`}
+								alt={data.article.title}
+								class="w-full h-auto rounded-lg shadow-md"
+							/>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Sumarizace -->
+			<div class="space-y-4 mb-6">
+				{#if data.article.summary_simple}
+					<div class="border border-gray-200 rounded-lg overflow-hidden">
+						<button 
+							onclick={() => toggleSection('simple')}
+							class="w-full flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 transition-colors"
+						>
+							<span class="font-semibold text-blue-900">📝 Jednoduchá sumarizace</span>
+							<span class="text-blue-700 text-xl">{expandedSections.simple ? '−' : '+'}</span>
+						</button>
+						{#if expandedSections.simple}
+							<div class="p-4 bg-white text-gray-800 leading-relaxed">
+								{data.article.summary_simple}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				{#if data.article.summary_funny}
+					<div class="border border-gray-200 rounded-lg overflow-hidden">
+						<button 
+							onclick={() => toggleSection('funny')}
+							class="w-full flex items-center justify-between p-4 bg-yellow-50 hover:bg-yellow-100 transition-colors"
+						>
+							<span class="font-semibold text-yellow-900">😄 Vtipná sumarizace</span>
+							<span class="text-yellow-700 text-xl">{expandedSections.funny ? '−' : '+'}</span>
+						</button>
+						{#if expandedSections.funny}
+							<div class="p-4 bg-white text-gray-800 leading-relaxed">
+								{data.article.summary_funny}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				{#if data.article.summary_storytelling}
+					<div class="border border-gray-200 rounded-lg overflow-hidden">
+						<button 
+							onclick={() => toggleSection('storytelling')}
+							class="w-full flex items-center justify-between p-4 bg-purple-50 hover:bg-purple-100 transition-colors"
+						>
+							<span class="font-semibold text-purple-900">📖 Storytelling sumarizace</span>
+							<span class="text-purple-700 text-xl">{expandedSections.storytelling ? '−' : '+'}</span>
+						</button>
+						{#if expandedSections.storytelling}
+							<div class="p-4 bg-white text-gray-800 leading-relaxed">
+								{data.article.summary_storytelling}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				{#if data.article.retold_content}
+					<div class="border border-gray-200 rounded-lg overflow-hidden">
+						<button 
+							onclick={() => toggleSection('retold')}
+							class="w-full flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 transition-colors"
+						>
+							<span class="font-semibold text-green-900">🎭 Převyprávěný obsah jako příběh</span>
+							<span class="text-green-700 text-xl">{expandedSections.retold ? '−' : '+'}</span>
+						</button>
+						{#if expandedSections.retold}
+							<div class="p-4 bg-white text-gray-800 leading-relaxed">
+								{data.article.retold_content}
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Originální obsah -->
 			{#if htmlContent}
-				<div class="text-gray-800 leading-relaxed [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-2 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:list-inside [&_ul]:mb-4 [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:list-inside [&_ol]:mb-4 [&_ol]:ml-4 [&_li]:mb-2 [&_a]:text-blue-600 [&_a]:hover:underline [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4 [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_pre]:bg-gray-100 [&_pre]:p-4 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_img]:max-w-full [&_img]:h-auto [&_img]:my-4 [&_img]:rounded [&_table]:w-full [&_table]:border-collapse [&_table]:mb-4 [&_th]:bg-gray-100 [&_th]:border [&_th]:border-gray-300 [&_th]:px-4 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-2">
-					{@html htmlContent}
+				<div class="border border-gray-200 rounded-lg overflow-hidden">
+					<button 
+						onclick={() => toggleSection('original')}
+						class="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+					>
+						<span class="font-semibold text-gray-900">📄 Originální obsah</span>
+						<span class="text-gray-700 text-xl">{expandedSections.original ? '−' : '+'}</span>
+					</button>
+					{#if expandedSections.original}
+						<div class="p-6 bg-white text-gray-800 leading-relaxed [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-8 [&_h1]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-2 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:list-inside [&_ul]:mb-4 [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:list-inside [&_ol]:mb-4 [&_ol]:ml-4 [&_li]:mb-2 [&_a]:text-blue-600 [&_a]:hover:underline [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:my-4 [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_pre]:bg-gray-100 [&_pre]:p-4 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_img]:max-w-full [&_img]:h-auto [&_img]:my-4 [&_img]:rounded [&_table]:w-full [&_table]:border-collapse [&_table]:mb-4 [&_th]:bg-gray-100 [&_th]:border [&_th]:border-gray-300 [&_th]:px-4 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-2">
+							{@html htmlContent}
+						</div>
+					{/if}
 				</div>
 			{:else}
 				<p class="text-gray-500 italic">Obsah článku není k dispozici.</p>

@@ -1,7 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import List # Přidat tento import
+from typing import List
+from pathlib import Path
 
 from . import models, schemas
 from .database import engine, get_db, Base
@@ -68,6 +71,16 @@ def read_article(article_id: int, db: Session = Depends(get_db)):
     """
     article = db.query(models.Article).filter(models.Article.id == article_id).first()
     if article is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Článek nenalezen")
     return article
+
+
+@app.get("/images/{filename}", tags=["Images"])
+def get_image(filename: str):
+    """
+    Vrátí obrázek článku.
+    """
+    image_path = Path("backend/static/images") / filename
+    if not image_path.exists():
+        raise HTTPException(status_code=404, detail="Obrázek nenalezen")
+    return FileResponse(image_path)

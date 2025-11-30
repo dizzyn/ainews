@@ -10,3 +10,10 @@ class Article(Base):
     categories = Column(Text, nullable=True)  # JSON string s kategorizací (země, osoby)
     content = Column(Text, nullable=True)  # Obsah článku jako markdown
     published_date = Column(DateTime, nullable=True)  # Datum vydání článku
+    
+    # Sumarizace
+    summary_simple = Column(Text, nullable=True)  # Jednoduchá sumarizace
+    summary_funny = Column(Text, nullable=True)  # Vtipná sumarizace
+    summary_storytelling = Column(Text, nullable=True)  # Storytelling sumarizace
+    retold_content = Column(Text, nullable=True)  # Převyprávěný obsah jako příběh
+    image_filename = Column(String(255), nullable=True)  # Název vygenerovaného obrázku
