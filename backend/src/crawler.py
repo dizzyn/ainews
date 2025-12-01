@@ -14,7 +14,7 @@ from .models import Article as DBArticle
 # 1. Načtení API klíče a konfigurace
 load_dotenv()
 
-TARGET_URL = os.getenv("TARGET_URL", "https://www.novinky.cz")
+NEWS_SOURCES = os.getenv("NEWS_SOURCES", "https://www.novinky.cz/").split(",")
 MAX_ARTICLES = int(os.getenv("MAX_ARTICLES", "100"))
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "20"))
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
@@ -205,22 +205,25 @@ async def analyze_with_ai_in_chunks(links: List[LinkItem], chunk_size: int = CHU
     return all_articles
 
 
-def save_to_database(articles: List[ArticleItem], links: List[LinkItem]) -> None:
+def save_to_database(articles: List[ArticleItem], links: List[LinkItem], source_url: str) -> None:
     """
-    Smaže databázi a uloží nové zprávy.
+    Uloží nové zprávy do databáze (bez mazání starých).
     """
     db = SessionLocal()
     try:
-        # 1. Smazání všech existujících článků
-        print("\n🗑️  Mažu staré zprávy z databáze...")
-        deleted_count = db.query(DBArticle).delete()
-        print(f"   Smazáno: {deleted_count} zpráv")
+        print(f"\n💾 Ukládám nové zprávy z {source_url} do databáze...")
+        saved_count = 0
+        skipped_count = 0
         
-        # 2. Uložení nových zpráv
-        print("\n💾 Ukládám nové zprávy do databáze...")
         for article in articles:
             if 0 <= article.index < len(links):
                 link = links[article.index]
+                
+                # Kontrola, zda článek již existuje (podle URL)
+                existing = db.query(DBArticle).filter(DBArticle.url == link.url).first()
+                if existing:
+                    skipped_count += 1
+                    continue
                 
                 # Vytvoření kategorizace jako JSON string
                 categories_data = {
@@ -236,9 +239,12 @@ def save_to_database(articles: List[ArticleItem], links: List[LinkItem]) -> None
                     categories=json.dumps(categories_data, ensure_ascii=False)
                 )
                 db.add(db_article)
+                saved_count += 1
         
         db.commit()
-        print(f"   ✅ Uloženo: {len(articles)} zpráv")
+        print(f"   ✅ Uloženo: {saved_count} nových zpráv")
+        if skipped_count > 0:
+            print(f"   ⏭️  Přeskočeno: {skipped_count} již existujících zpráv")
         
     except Exception as e:
         db.rollback()
@@ -248,9 +254,16 @@ def save_to_database(articles: List[ArticleItem], links: List[LinkItem]) -> None
         db.close()
 
 
-async def main():
+async def process_source(source_url: str) -> tuple[int, int]:
+    """
+    Zpracuje jeden zdroj zpráv a vrátí počet nalezených a uložených článků.
+    """
+    print("\n" + "="*80)
+    print(f"🌐 ZPRACOVÁVÁM ZDROJ: {source_url}")
+    print("="*80)
+    
     # 1. Krok: Získání dat
-    links = await get_page_links(TARGET_URL)
+    links = await get_page_links(source_url)
     
     # 2. Krok: Příprava kandidátů
     # Seřadíme podle délky textu sestupně (články mívají dlouhé titulky)
@@ -264,12 +277,10 @@ async def main():
     articles = await analyze_with_ai_in_chunks(top_candidates, chunk_size=CHUNK_SIZE)
 
     # 4. Krok: Uložení do databáze
-    save_to_database(articles, top_candidates)
+    save_to_database(articles, top_candidates, source_url)
 
     # 5. Krok: Výpis
-    print("\n" + "="*60)
-    print(f"✅ VÝSLEDEK: Nalezeno {len(articles)} zpráv")
-    print("="*60)
+    print(f"\n✅ VÝSLEDEK PRO {source_url}: Nalezeno {len(articles)} zpráv")
     
     for i, article in enumerate(articles, 1):
         # Rekonstrukce nadpisu podle indexu
@@ -289,6 +300,37 @@ async def main():
             print(f"    🌍 Země: {', '.join(article.countries)}")
         if article.people:
             print(f"    👤 Osoby: {', '.join(article.people)}")
+    
+    return len(articles), len(top_candidates)
+
+
+async def main():
+    print("\n" + "="*80)
+    print(f"🚀 SPOUŠTÍM CRAWLER PRO {len(NEWS_SOURCES)} ZDROJŮ")
+    print("="*80)
+    print(f"Zdroje: {', '.join(NEWS_SOURCES)}")
+    print(f"Max článků na zdroj: {MAX_ARTICLES}")
+    print(f"Velikost chunku: {CHUNK_SIZE}")
+    
+    total_articles = 0
+    total_candidates = 0
+    
+    for source in NEWS_SOURCES:
+        source = source.strip()
+        if not source:
+            continue
+        
+        try:
+            articles_count, candidates_count = await process_source(source)
+            total_articles += articles_count
+            total_candidates += candidates_count
+        except Exception as e:
+            print(f"\n❌ Chyba při zpracování {source}: {e}")
+            continue
+    
+    print("\n" + "="*80)
+    print(f"🎉 HOTOVO! Celkem nalezeno {total_articles} zpráv z {total_candidates} kandidátů")
+    print("="*80)
 
 if __name__ == "__main__":
     asyncio.run(main())

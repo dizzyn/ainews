@@ -3,11 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import List
 from pathlib import Path
+import google.generativeai as genai
+import os
 
 from . import models, schemas
 from .database import engine, get_db, Base
+
+# Konfigurace Gemini pro embeddingy
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Tento příkaz řekne Alembicu o našich modelech.
 Base.metadata.create_all(bind=engine)
@@ -95,3 +101,56 @@ def get_image(filename: str):
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Obrázek nenalezen")
     return FileResponse(image_path)
+
+
+@app.get("/articles/{article_id}/related", response_model=List[schemas.Article], tags=["Articles"])
+def get_related_articles(article_id: int, limit: int = 5, db: Session = Depends(get_db)):
+    """
+    Vrátí podobné články pomocí RAG (vektorové podobnosti).
+    """
+    # Načteme článek
+    article = db.query(models.Article).filter(models.Article.id == article_id).first()
+    if article is None:
+        raise HTTPException(status_code=404, detail="Článek nenalezen")
+    
+    # Pokud článek nemá embedding, nemůžeme najít podobné
+    if article.embedding is None:
+        return []
+    
+    # Konvertujeme embedding na list (pokud je to numpy array)
+    embedding_list = article.embedding
+    if hasattr(embedding_list, 'tolist'):
+        embedding_list = embedding_list.tolist()
+    
+    # Najdeme podobné články pomocí cosine similarity
+    # Používáme pgvector operátor <=> pro cosine distance
+    query = text("""
+        SELECT id, title, url, categories
+        FROM articles
+        WHERE id != :article_id 
+        AND embedding IS NOT NULL
+        AND url != 'DIGEST'
+        ORDER BY embedding <=> CAST(:embedding AS vector)
+        LIMIT :limit
+    """)
+    
+    result = db.execute(
+        query,
+        {
+            "article_id": article_id,
+            "embedding": embedding_list,
+            "limit": limit
+        }
+    )
+    
+    # Převedeme výsledky na Article objekty
+    related = []
+    for row in result:
+        related.append(schemas.Article(
+            id=row.id,
+            title=row.title,
+            url=row.url,
+            categories=row.categories
+        ))
+    
+    return related

@@ -22,7 +22,7 @@
             "program": "${workspaceFolder}/backend/src/crawler.py",
             "console": "integratedTerminal",
             "env": {
-                "TARGET_URL": "https://www.novinky.cz",
+                "NEWS_SOURCES": "https://www.novinky.cz",
                 "DATABASE_URL": "postgresql://admin:admin@localhost:5432/admin_db"
             }
         }

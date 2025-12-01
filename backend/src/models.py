@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime
+from pgvector.sqlalchemy import Vector
 from .database import Base  # Importujeme Base z našeho database.py
 
 class Article(Base):
@@ -17,3 +18,6 @@ class Article(Base):
     summary_storytelling = Column(Text, nullable=True)  # Storytelling sumarizace
     retold_content = Column(Text, nullable=True)  # Převyprávěný obsah jako příběh
     image_filename = Column(String(255), nullable=True)  # Název vygenerovaného obrázku
+    
+    # Vektorová reprezentace pro RAG (Gemini embedding-001 má 768 dimenzí)
+    embedding = Column(Vector(768), nullable=True)

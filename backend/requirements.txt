@@ -11,6 +11,7 @@ gunicorn
 sqlalchemy
 alembic
 psycopg2-binary
+pgvector
 
 # --- Ostatní ---
 python-dotenv

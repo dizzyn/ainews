@@ -223,5 +223,24 @@
 				<p class="text-gray-500 italic">Obsah článku není k dispozici.</p>
 			{/if}
 		</article>
+
+		<!-- Související články -->
+		{#if data.relatedArticles && data.relatedArticles.length > 0}
+			<section class="mt-8 bg-white shadow-lg rounded-lg p-8">
+				<h2 class="text-2xl font-bold text-gray-900 mb-4">🔗 Související články</h2>
+				<div class="space-y-3">
+					{#each data.relatedArticles as related}
+						<a 
+							href={`/article/${related.id}`}
+							class="block p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+						>
+							<h3 class="font-semibold text-gray-900 hover:text-blue-600">
+								{related.title}
+							</h3>
+						</a>
+					{/each}
+				</div>
+			</section>
+		{/if}
 	{/if}
 </div>
